@@ -2,6 +2,7 @@ import { Patient, Appointment } from '@/types/scheduling';
 
 const PATIENTS_KEY = 'medsched_patients';
 const APPOINTMENTS_KEY = 'medsched_appointments';
+const OPEN_DAYS_KEY = 'medsched_open_days';
 
 export function getPatients(): Patient[] {
   const data = localStorage.getItem(PATIENTS_KEY);
