@@ -1,5 +1,5 @@
 import { Patient, Appointment } from '@/types/scheduling';
-import { getPatients, savePatients, getAppointments } from '@/lib/storage';
+import { getPatients, savePatients, getAppointments, getOpenDays, saveOpenDays, addOpenDay } from '@/lib/storage';
 
 const CSV_SEP = ';';
 
