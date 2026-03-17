@@ -4,12 +4,13 @@ import { DailyGrid } from '@/components/DailyGrid';
 import { PatientDrawer } from '@/components/PatientDrawer';
 import { PatientList } from '@/components/PatientList';
 import { ExcelImport } from '@/components/ExcelImport';
-import { DateStrip } from '@/components/DateStrip';
+import { CalendarPicker } from '@/components/CalendarPicker';
 import { StatusBar } from '@/components/StatusBar';
 import { importExcel } from '@/lib/excel-import';
+import { exportToExcel } from '@/lib/excel-export';
 import { generatePDF } from '@/lib/pdf-generator';
 import { downloadBackup, importBackup } from '@/lib/csv-backup';
-import { FileText, RotateCcw, Calendar, Users, Copy, Download, Upload, Plus } from 'lucide-react';
+import { FileText, RotateCcw, Calendar, Users, Copy, Download, Upload, Plus, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Tab = 'agenda' | 'pacientes';
@@ -39,6 +40,11 @@ export default function Index() {
   const handlePDF = () => {
     if (!scheduler.selectedDate) return;
     generatePDF(scheduler.selectedDate, scheduler.appointments);
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel();
+    toast.success('Planilha Excel exportada com sucesso!');
   };
 
   const handleResetDay = () => {
@@ -89,8 +95,10 @@ export default function Index() {
 
   const formatDateDisplay = (d: string) => {
     const [y, m, day] = d.split('-');
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    return `${day} ${months[parseInt(m) - 1]} ${y}`;
+    const weekdays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const date = new Date(Number(y), Number(m) - 1, Number(day));
+    return `${weekdays[date.getDay()]}, ${day} de ${months[parseInt(m) - 1]} de ${y}`;
   };
 
   return (
@@ -105,12 +113,20 @@ export default function Index() {
             <div className="flex items-center gap-2">
               <ExcelImport onImport={handleImport} />
               <button
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-all font-medium"
+                title="Exportar planilha Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span className="hidden sm:inline">Exportar Excel</span>
+              </button>
+              <button
                 onClick={handleExportCSV}
                 className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-foreground"
                 title="Exportar backup CSV"
               >
                 <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Exportar</span>
+                <span className="hidden sm:inline">Backup</span>
               </button>
               <input ref={csvInputRef} type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
               <button
@@ -119,7 +135,7 @@ export default function Index() {
                 title="Importar backup CSV"
               >
                 <Upload className="w-4 h-4" />
-                <span className="hidden sm:inline">Importar CSV</span>
+                <span className="hidden sm:inline">Importar</span>
               </button>
             </div>
           </div>
@@ -147,84 +163,86 @@ export default function Index() {
               <Users className="w-3.5 h-3.5" /> Pacientes ({scheduler.patients.length})
             </button>
           </div>
-
-          {activeTab === 'agenda' && (
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <DateStrip
-                  selectedDate={scheduler.selectedDate}
-                  onChange={scheduler.changeDate}
-                  openDays={scheduler.openDays}
-                  daysWithAppts={scheduler.daysWithAppts}
-                  onDeleteDay={scheduler.deleteDay}
-                />
-                <button
-                  onClick={handleCreateDay}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-md bg-accent text-foreground hover:bg-accent/80 transition-colors font-medium"
-                  title="Liberar novo dia de atendimento"
-                >
-                  <Plus className="w-4 h-4" /> Novo Dia
-                </button>
-              </div>
-              {scheduler.selectedDate && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handlePDF}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
-                  >
-                    <FileText className="w-4 h-4" /> Gerar PDF
-                  </button>
-                  <button
-                    onClick={handleDuplicateDay}
-                    className="flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-muted-foreground"
-                    title="Duplicar agenda de outro dia"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={handleResetDay}
-                    className="flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-destructive"
-                    title="Limpar dia"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-4">
         {activeTab === 'agenda' && (
-          <>
-            {scheduler.selectedDate ? (
-              <>
-                <div className="text-sm font-medium text-muted-foreground mb-4">
-                  {formatDateDisplay(scheduler.selectedDate)}
-                </div>
-                <DailyGrid
-                  appointments={scheduler.appointments}
-                  onSlotClick={handleSlotClick}
-                  onRemoveSlot={scheduler.cancelSlot}
-                />
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Calendar className="w-12 h-12 text-muted-foreground/40 mb-4" />
-                <h2 className="text-lg font-medium text-muted-foreground mb-2">Nenhum dia liberado</h2>
-                <p className="text-sm text-muted-foreground/70 mb-4">
-                  Clique em "Novo Dia" para liberar uma data de atendimento.
-                </p>
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Left: Calendar + actions */}
+            <div className="lg:w-72 shrink-0">
+              <CalendarPicker
+                selectedDate={scheduler.selectedDate}
+                onChange={scheduler.changeDate}
+                openDays={scheduler.openDays}
+                daysWithAppts={scheduler.daysWithAppts}
+                onDeleteDay={scheduler.deleteDay}
+              />
+              <div className="mt-3 flex flex-col gap-2">
                 <button
                   onClick={handleCreateDay}
-                  className="flex items-center gap-1.5 px-4 py-2.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-md bg-accent text-foreground hover:bg-accent/80 transition-colors font-medium w-full"
+                  title="Liberar novo dia de atendimento"
                 >
-                  <Plus className="w-4 h-4" /> Criar Dia de Atendimento
+                  <Plus className="w-4 h-4" /> Novo Dia
                 </button>
+                {scheduler.selectedDate && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handlePDF}
+                      className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium flex-1"
+                    >
+                      <FileText className="w-4 h-4" /> PDF
+                    </button>
+                    <button
+                      onClick={handleDuplicateDay}
+                      className="flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-muted-foreground"
+                      title="Duplicar agenda de outro dia"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={handleResetDay}
+                      className="flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-destructive"
+                      title="Limpar dia"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </>
+            </div>
+
+            {/* Right: Daily grid */}
+            <div className="flex-1">
+              {scheduler.selectedDate ? (
+                <>
+                  <div className="text-sm font-medium text-muted-foreground mb-4">
+                    {formatDateDisplay(scheduler.selectedDate)}
+                  </div>
+                  <DailyGrid
+                    appointments={scheduler.appointments}
+                    onSlotClick={handleSlotClick}
+                    onRemoveSlot={scheduler.cancelSlot}
+                  />
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <Calendar className="w-12 h-12 text-muted-foreground/40 mb-4" />
+                  <h2 className="text-lg font-medium text-muted-foreground mb-2">Nenhum dia liberado</h2>
+                  <p className="text-sm text-muted-foreground/70 mb-4">
+                    Clique em "Novo Dia" para liberar uma data de atendimento.
+                  </p>
+                  <button
+                    onClick={handleCreateDay}
+                    className="flex items-center gap-1.5 px-4 py-2.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
+                  >
+                    <Plus className="w-4 h-4" /> Criar Dia de Atendimento
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {activeTab === 'pacientes' && (
