@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useScheduler } from '@/hooks/useScheduler';
 import { DailyGrid } from '@/components/DailyGrid';
 import { PatientDrawer } from '@/components/PatientDrawer';
@@ -8,7 +8,8 @@ import { DateStrip } from '@/components/DateStrip';
 import { StatusBar } from '@/components/StatusBar';
 import { importExcel } from '@/lib/excel-import';
 import { generatePDF } from '@/lib/pdf-generator';
-import { FileText, RotateCcw, Calendar, Users, Copy } from 'lucide-react';
+import { downloadBackup, importBackup } from '@/lib/csv-backup';
+import { FileText, RotateCcw, Calendar, Users, Copy, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Tab = 'agenda' | 'pacientes';
@@ -18,6 +19,7 @@ export default function Index() {
   const [activeTab, setActiveTab] = useState<Tab>('agenda');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const handleSlotClick = (slot: number) => {
     setSelectedSlot(slot);
@@ -26,8 +28,13 @@ export default function Index() {
 
   const handleImport = (buffer: ArrayBuffer) => {
     const result = importExcel(buffer);
-    scheduler.refreshPatients();
-    toast.success(`${result.patientsImported} pacientes importados. ${result.sheetsProcessed} abas processadas.`);
+    scheduler.refreshAll();
+    // Navigate to first imported date if available
+    if (result.appointments.length > 0) {
+      const dates = [...new Set(result.appointments.map(a => a.date))].sort();
+      if (dates[0]) scheduler.changeDate(dates[0]);
+    }
+    toast.success(`${result.patientsImported} pacientes e ${result.appointments.length} consultas importados.`);
   };
 
   const handlePDF = () => {
@@ -45,6 +52,25 @@ export default function Index() {
       scheduler.copyDay(from);
       toast.success('Agenda duplicada com sucesso.');
     }
+  };
+
+  const handleExportCSV = () => {
+    downloadBackup();
+    toast.success('Backup exportado com sucesso!');
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result as string;
+      const result = importBackup(text);
+      scheduler.refreshAll();
+      toast.success(`Importados: ${result.patients} pacientes, ${result.appointments} agendamentos.`);
+    };
+    reader.readAsText(file);
+    if (csvInputRef.current) csvInputRef.current.value = '';
   };
 
   const existingAppt = selectedSlot
@@ -69,6 +95,23 @@ export default function Index() {
             </div>
             <div className="flex items-center gap-2">
               <ExcelImport onImport={handleImport} />
+              <button
+                onClick={handleExportCSV}
+                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-foreground"
+                title="Exportar backup CSV"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Exportar</span>
+              </button>
+              <input ref={csvInputRef} type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+              <button
+                onClick={() => csvInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-foreground"
+                title="Importar backup CSV"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">Importar CSV</span>
+              </button>
             </div>
           </div>
 
@@ -98,7 +141,7 @@ export default function Index() {
 
           {activeTab === 'agenda' && (
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <DateStrip date={scheduler.selectedDate} onChange={scheduler.changeDate} />
+              <DateStrip date={scheduler.selectedDate} onChange={scheduler.changeDate} daysWithAppts={scheduler.daysWithAppts} />
               <div className="flex items-center gap-2">
                 <button
                   onClick={handlePDF}

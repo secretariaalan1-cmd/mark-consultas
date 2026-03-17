@@ -3,7 +3,8 @@ import { Appointment, Patient } from '@/types/scheduling';
 import {
   getAppointments, saveAppointment, removeAppointment,
   clearDay, duplicateDay, getPatients, searchPatients,
-  isPatientBookedOnDate, upsertPatient, deletePatient
+  isPatientBookedOnDate, upsertPatient, deletePatient,
+  getDaysWithAppointments
 } from '@/lib/storage';
 
 export function useScheduler() {
@@ -13,6 +14,11 @@ export function useScheduler() {
   });
   const [appointments, setAppointments] = useState<Appointment[]>(() => getAppointments(selectedDate));
   const [patients, setPatients] = useState<Patient[]>(() => getPatients());
+  const [daysWithAppts, setDaysWithAppts] = useState<Set<string>>(() => getDaysWithAppointments());
+
+  const refreshDays = useCallback(() => {
+    setDaysWithAppts(getDaysWithAppointments());
+  }, []);
 
   const changeDate = useCallback((date: string) => {
     setSelectedDate(date);
@@ -22,7 +28,6 @@ export function useScheduler() {
   const bookSlot = useCallback((appt: Appointment) => {
     const updated = saveAppointment(appt);
     setAppointments(updated);
-    // Also upsert the patient
     upsertPatient({
       id: appt.patientId,
       name: appt.patientName,
@@ -32,22 +37,26 @@ export function useScheduler() {
       observations: '',
     });
     setPatients(getPatients());
-  }, []);
+    refreshDays();
+  }, [refreshDays]);
 
   const cancelSlot = useCallback((slot: number) => {
     const updated = removeAppointment(selectedDate, slot);
     setAppointments(updated);
-  }, [selectedDate]);
+    refreshDays();
+  }, [selectedDate, refreshDays]);
 
   const resetDay = useCallback(() => {
     clearDay(selectedDate);
     setAppointments([]);
-  }, [selectedDate]);
+    refreshDays();
+  }, [selectedDate, refreshDays]);
 
   const copyDay = useCallback((fromDate: string) => {
     const updated = duplicateDay(fromDate, selectedDate);
     setAppointments(updated);
-  }, [selectedDate]);
+    refreshDays();
+  }, [selectedDate, refreshDays]);
 
   const checkDuplicate = useCallback((patientId: string, excludeSlot?: number) => {
     return isPatientBookedOnDate(selectedDate, patientId, excludeSlot);
@@ -60,6 +69,12 @@ export function useScheduler() {
   const refreshPatients = useCallback(() => {
     setPatients(getPatients());
   }, []);
+
+  const refreshAll = useCallback(() => {
+    setPatients(getPatients());
+    setAppointments(getAppointments(selectedDate));
+    refreshDays();
+  }, [selectedDate, refreshDays]);
 
   const updatePatient = useCallback((patient: Patient) => {
     upsertPatient(patient);
@@ -80,7 +95,8 @@ export function useScheduler() {
     selectedDate, changeDate,
     appointments, bookSlot, cancelSlot, resetDay, copyDay,
     checkDuplicate, search,
-    patients, refreshPatients, updatePatient, removePatient,
+    patients, refreshPatients, refreshAll, updatePatient, removePatient,
     manhaAppts, tardeAppts, livresManha, livresTarde,
+    daysWithAppts,
   };
 }
