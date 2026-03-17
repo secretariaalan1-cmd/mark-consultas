@@ -1,5 +1,5 @@
 import { Patient, Appointment } from '@/types/scheduling';
-import { getPatients, savePatients, getAppointments } from '@/lib/storage';
+import { getPatients, savePatients, getAppointments, getOpenDays, saveOpenDays, addOpenDay } from '@/lib/storage';
 
 const CSV_SEP = ';';
 
@@ -33,8 +33,12 @@ function parseCSVLine(line: string): string[] {
 export function exportBackup(): string {
   const patients = getPatients();
   const appointments = getAppointments();
+  const openDays = getOpenDays();
 
-  let csv = '### PACIENTES ###\n';
+  let csv = '### DIAS LIBERADOS ###\n';
+  csv += openDays.join(CSV_SEP) + '\n';
+
+  csv += '### PACIENTES ###\n';
   csv += ['id', 'name', 'susCard', 'dob', 'psf', 'observations'].map(escapeCSV).join(CSV_SEP) + '\n';
   for (const p of patients) {
     csv += [p.id, p.name, p.susCard, p.dob, p.psf, p.observations].map(escapeCSV).join(CSV_SEP) + '\n';
@@ -69,8 +73,18 @@ export function importBackup(text: string): { patients: number; appointments: nu
   let headerSkipped = false;
 
   for (const line of lines) {
+    if (line.startsWith('### DIAS LIBERADOS ###')) { section = 'days'; headerSkipped = false; continue; }
     if (line.startsWith('### PACIENTES ###')) { section = 'patients'; headerSkipped = false; continue; }
     if (line.startsWith('### AGENDAMENTOS ###')) { section = 'appointments'; headerSkipped = false; continue; }
+    
+    if (section === 'days') {
+      // Days line contains dates separated by ;
+      const days = line.split(CSV_SEP).map(d => d.trim()).filter(Boolean);
+      for (const d of days) addOpenDay(d);
+      section = ''; // only one line
+      continue;
+    }
+    
     if (!headerSkipped) { headerSkipped = true; continue; }
 
     const cols = parseCSVLine(line);
@@ -95,6 +109,9 @@ export function importBackup(text: string): { patients: number; appointments: nu
   const apptMap = new Map(existingAppts.map(a => [`${a.date}_${a.slot}`, a]));
   for (const a of appointments) apptMap.set(`${a.date}_${a.slot}`, a);
   localStorage.setItem('medsched_appointments', JSON.stringify(Array.from(apptMap.values())));
+
+  // Also register open days from appointments
+  for (const a of appointments) addOpenDay(a.date);
 
   return { patients: patients.length, appointments: appointments.length };
 }

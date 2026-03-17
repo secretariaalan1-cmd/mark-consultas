@@ -2,6 +2,7 @@ import { Patient, Appointment } from '@/types/scheduling';
 
 const PATIENTS_KEY = 'medsched_patients';
 const APPOINTMENTS_KEY = 'medsched_appointments';
+const OPEN_DAYS_KEY = 'medsched_open_days';
 
 export function getPatients(): Patient[] {
   const data = localStorage.getItem(PATIENTS_KEY);
@@ -89,4 +90,36 @@ export function searchPatients(query: string): Patient[] {
   return getPatients().filter(p =>
     p.name.toLowerCase().includes(q) || p.susCard.includes(q)
   ).slice(0, 10);
+}
+
+// Open days management
+export function getOpenDays(): string[] {
+  const data = localStorage.getItem(OPEN_DAYS_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+export function addOpenDay(date: string): string[] {
+  const days = getOpenDays();
+  if (!days.includes(date)) {
+    days.push(date);
+    days.sort();
+    localStorage.setItem(OPEN_DAYS_KEY, JSON.stringify(days));
+  }
+  return days;
+}
+
+export function removeOpenDay(date: string): string[] {
+  const days = getOpenDays().filter(d => d !== date);
+  localStorage.setItem(OPEN_DAYS_KEY, JSON.stringify(days));
+  // Also clear appointments for that day
+  clearDay(date);
+  return days;
+}
+
+export function isOpenDay(date: string): boolean {
+  return getOpenDays().includes(date);
+}
+
+export function saveOpenDays(days: string[]) {
+  localStorage.setItem(OPEN_DAYS_KEY, JSON.stringify(days));
 }
