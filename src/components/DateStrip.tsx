@@ -3,9 +3,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface Props {
   date: string;
   onChange: (date: string) => void;
+  daysWithAppts?: Set<string>;
 }
 
-export function DateStrip({ date, onChange }: Props) {
+export function DateStrip({ date, onChange, daysWithAppts }: Props) {
   const current = new Date(date + 'T12:00:00');
 
   const getDays = () => {
@@ -41,12 +42,13 @@ export function DateStrip({ date, onChange }: Props) {
           const iso = toISO(d);
           const isSelected = iso === date;
           const isToday = iso === new Date().toISOString().split('T')[0];
+          const hasAppts = daysWithAppts?.has(iso);
           return (
             <button
               key={iso}
               onClick={() => onChange(iso)}
               className={`
-                flex flex-col items-center px-2.5 py-1.5 rounded-md text-xs transition-colors min-w-[48px]
+                flex flex-col items-center px-2.5 py-1.5 rounded-md text-xs transition-colors min-w-[48px] relative
                 ${isSelected
                   ? 'bg-primary text-primary-foreground'
                   : isToday
@@ -56,7 +58,10 @@ export function DateStrip({ date, onChange }: Props) {
               `}
             >
               <span className="font-medium">{formatDay(d)}</span>
-              <span className={`text-lg font-semibold tabular-nums ${isSelected ? '' : ''}`}>{d.getDate()}</span>
+              <span className="text-lg font-semibold tabular-nums">{d.getDate()}</span>
+              {hasAppts && (
+                <span className={`w-1.5 h-1.5 rounded-full absolute bottom-0.5 ${isSelected ? 'bg-primary-foreground' : 'bg-primary'}`} />
+              )}
             </button>
           );
         })}
