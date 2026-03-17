@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Patient, Appointment } from '@/types/scheduling';
-import { getPatients, savePatients } from '@/lib/storage';
+import { getPatients, savePatients, saveAppointment } from '@/lib/storage';
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 15);
@@ -136,6 +136,11 @@ export function importExcel(file: ArrayBuffer): ImportResult {
 
   const patients = Array.from(patientMap.values());
   savePatients(patients);
+
+  // Save appointments to localStorage
+  for (const appt of allAppointments) {
+    saveAppointment(appt);
+  }
 
   return {
     patients,
