@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Patient, Appointment } from '@/types/scheduling';
-import { getPatients, savePatients } from '@/lib/storage';
+import { getPatients, savePatients, saveAppointment } from '@/lib/storage';
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 15);
