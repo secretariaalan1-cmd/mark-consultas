@@ -33,8 +33,12 @@ function parseCSVLine(line: string): string[] {
 export function exportBackup(): string {
   const patients = getPatients();
   const appointments = getAppointments();
+  const openDays = getOpenDays();
 
-  let csv = '### PACIENTES ###\n';
+  let csv = '### DIAS LIBERADOS ###\n';
+  csv += openDays.join(CSV_SEP) + '\n';
+
+  csv += '### PACIENTES ###\n';
   csv += ['id', 'name', 'susCard', 'dob', 'psf', 'observations'].map(escapeCSV).join(CSV_SEP) + '\n';
   for (const p of patients) {
     csv += [p.id, p.name, p.susCard, p.dob, p.psf, p.observations].map(escapeCSV).join(CSV_SEP) + '\n';
