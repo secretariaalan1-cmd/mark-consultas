@@ -40,6 +40,11 @@ export function getAppointments(date?: string): Appointment[] {
   return all;
 }
 
+export function getDaysWithAppointments(): Set<string> {
+  const all = getAppointments();
+  return new Set(all.map(a => a.date));
+}
+
 export function saveAppointment(appt: Appointment): Appointment[] {
   const all = getAppointments();
   const idx = all.findIndex(a => a.date === appt.date && a.slot === appt.slot);

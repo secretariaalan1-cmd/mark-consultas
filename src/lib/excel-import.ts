@@ -137,6 +137,11 @@ export function importExcel(file: ArrayBuffer): ImportResult {
   const patients = Array.from(patientMap.values());
   savePatients(patients);
 
+  // Save appointments to localStorage
+  for (const appt of allAppointments) {
+    saveAppointment(appt);
+  }
+
   return {
     patients,
     appointments: allAppointments,
