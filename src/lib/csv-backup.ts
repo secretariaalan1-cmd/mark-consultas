@@ -73,8 +73,18 @@ export function importBackup(text: string): { patients: number; appointments: nu
   let headerSkipped = false;
 
   for (const line of lines) {
+    if (line.startsWith('### DIAS LIBERADOS ###')) { section = 'days'; headerSkipped = false; continue; }
     if (line.startsWith('### PACIENTES ###')) { section = 'patients'; headerSkipped = false; continue; }
     if (line.startsWith('### AGENDAMENTOS ###')) { section = 'appointments'; headerSkipped = false; continue; }
+    
+    if (section === 'days') {
+      // Days line contains dates separated by ;
+      const days = line.split(CSV_SEP).map(d => d.trim()).filter(Boolean);
+      for (const d of days) addOpenDay(d);
+      section = ''; // only one line
+      continue;
+    }
+    
     if (!headerSkipped) { headerSkipped = true; continue; }
 
     const cols = parseCSVLine(line);
@@ -99,6 +109,9 @@ export function importBackup(text: string): { patients: number; appointments: nu
   const apptMap = new Map(existingAppts.map(a => [`${a.date}_${a.slot}`, a]));
   for (const a of appointments) apptMap.set(`${a.date}_${a.slot}`, a);
   localStorage.setItem('medsched_appointments', JSON.stringify(Array.from(apptMap.values())));
+
+  // Also register open days from appointments
+  for (const a of appointments) addOpenDay(a.date);
 
   return { patients: patients.length, appointments: appointments.length };
 }
