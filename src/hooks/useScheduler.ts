@@ -126,9 +126,9 @@ export function useScheduler() {
   }, []);
 
   const manhaAppts = appointments.filter(a => a.slot <= 15);
-  const tardeAppts = appointments.filter(a => a.slot > 15);
+  const tardeAppts = appointments.filter(a => a.slot >= 16 && a.slot <= 32);
   const livresManha = 15 - manhaAppts.length;
-  const livresTarde = 15 - tardeAppts.length;
+  const livresTarde = 17 - tardeAppts.length;
 
   return {
     selectedDate, changeDate,

@@ -5,11 +5,12 @@ interface Props {
   slot: number;
   appointment?: Appointment;
   variant: 'rural' | 'cidade';
+  isAberto?: boolean;
   onClick: () => void;
   onRemove: () => void;
 }
 
-export function SlotCard({ slot, appointment, variant, onClick, onRemove }: Props) {
+export function SlotCard({ slot, appointment, variant, isAberto, onClick, onRemove }: Props) {
   const isEmpty = !appointment;
   const accentClass = variant === 'rural' ? 'border-l-rural' : 'border-l-cidade';
 
@@ -30,7 +31,9 @@ export function SlotCard({ slot, appointment, variant, onClick, onRemove }: Prop
       </span>
 
       {isEmpty ? (
-        <span className="text-xs text-muted-foreground italic">Livre</span>
+        <span className="text-xs text-muted-foreground italic">
+          {isAberto ? 'Aberta' : 'Livre'}
+        </span>
       ) : (
         <div className="flex-1 min-w-0 ml-2">
           <div className="flex items-center gap-2">

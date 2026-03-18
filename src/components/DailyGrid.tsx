@@ -1,4 +1,4 @@
-import { Appointment, SLOTS_MANHA, SLOTS_TARDE } from '@/types/scheduling';
+import { Appointment, SLOTS_MANHA, SLOTS_TARDE, SLOTS_ABERTOS } from '@/types/scheduling';
 import { SlotCard } from './SlotCard';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
 
 export function DailyGrid({ appointments, onSlotClick, onRemoveSlot }: Props) {
   const getAppt = (slot: number) => appointments.find(a => a.slot === slot);
+  const isAberto = (slot: number) => SLOTS_ABERTOS.includes(slot);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
@@ -19,6 +20,7 @@ export function DailyGrid({ appointments, onSlotClick, onRemoveSlot }: Props) {
           <h3 className="text-sm font-semibold tracking-tight">
             MANHÃ — 08:00 — ZONA RURAL
           </h3>
+          <span className="text-xs text-muted-foreground ml-auto">15 vagas</span>
         </div>
         <div className="space-y-1.5">
           {SLOTS_MANHA.map(slot => (
@@ -41,6 +43,7 @@ export function DailyGrid({ appointments, onSlotClick, onRemoveSlot }: Props) {
           <h3 className="text-sm font-semibold tracking-tight">
             TARDE — 14:00 — CIDADE / CAMOCIM
           </h3>
+          <span className="text-xs text-muted-foreground ml-auto">17 vagas</span>
         </div>
         <div className="space-y-1.5">
           {SLOTS_TARDE.map(slot => (
@@ -49,6 +52,7 @@ export function DailyGrid({ appointments, onSlotClick, onRemoveSlot }: Props) {
               slot={slot}
               appointment={getAppt(slot)}
               variant="cidade"
+              isAberto={isAberto(slot)}
               onClick={() => onSlotClick(slot)}
               onRemove={() => onRemoveSlot(slot)}
             />
