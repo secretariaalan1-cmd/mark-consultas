@@ -31,7 +31,9 @@ export function SlotCard({ slot, appointment, variant, isAberto, onClick, onRemo
       </span>
 
       {isEmpty ? (
-        <span className="text-xs text-muted-foreground italic">Livre</span>
+        <span className="text-xs text-muted-foreground italic">
+          {isAberto ? 'Aberta' : 'Livre'}
+        </span>
       ) : (
         <div className="flex-1 min-w-0 ml-2">
           <div className="flex items-center gap-2">
