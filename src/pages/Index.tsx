@@ -9,6 +9,7 @@ import { StatusBar } from '@/components/StatusBar';
 import { importExcel } from '@/lib/excel-import';
 import { exportToExcel, exportDayToExcel } from '@/lib/excel-export';
 import { downloadBackup, importBackup } from '@/lib/csv-backup';
+import { printTicket } from '@/lib/ticket-print';
 import { FileText, RotateCcw, Calendar, Users, Copy, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -78,6 +79,15 @@ export default function Index() {
     };
     reader.readAsText(file);
     if (csvInputRef.current) csvInputRef.current.value = '';
+  };
+  
+  const handlePrintSlot = (slot: number) => {
+    const appt = scheduler.appointments.find(a => a.slot === slot);
+    if (appt) {
+      printTicket(appt);
+      scheduler.markAsPrinted(slot);
+      toast.success('Boleto pronto para impressão!');
+    }
   };
 
   const existingAppt = selectedSlot
@@ -160,6 +170,7 @@ export default function Index() {
                 appointments={scheduler.appointments}
                 onSlotClick={handleSlotClick}
                 onRemoveSlot={scheduler.cancelSlot}
+                onPrintSlot={handlePrintSlot}
               />
             </div>
           </div>

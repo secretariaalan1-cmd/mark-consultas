@@ -1,5 +1,5 @@
 import { Appointment } from '@/types/scheduling';
-import { X } from 'lucide-react';
+import { X, Printer, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   slot: number;
@@ -8,9 +8,10 @@ interface Props {
   isAberto?: boolean;
   onClick: () => void;
   onRemove: () => void;
+  onPrint?: () => void;
 }
 
-export function SlotCard({ slot, appointment, variant, isAberto, onClick, onRemove }: Props) {
+export function SlotCard({ slot, appointment, variant, isAberto, onClick, onRemove, onPrint }: Props) {
   const isEmpty = !appointment;
   const accentClass = variant === 'rural' ? 'border-l-rural' : 'border-l-cidade';
 
@@ -43,6 +44,11 @@ export function SlotCard({ slot, appointment, variant, isAberto, onClick, onRemo
                 RETORNO
               </span>
             )}
+            {appointment.printed && (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold px-1 rounded bg-emerald-50 border border-emerald-100">
+                <CheckCircle2 className="w-3 h-3" /> Impresso
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             {appointment.susCard && (
@@ -56,13 +62,24 @@ export function SlotCard({ slot, appointment, variant, isAberto, onClick, onRemo
       )}
 
       {!isEmpty && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 rounded hover:bg-destructive/10 text-destructive"
-          title="Remover"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1 ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onPrint && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onPrint(); }}
+              className="p-1.5 rounded hover:bg-primary/10 text-primary"
+              title="Imprimir boleto"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="p-1.5 rounded hover:bg-destructive/10 text-destructive"
+            title="Remover"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   );

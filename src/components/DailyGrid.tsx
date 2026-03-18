@@ -5,9 +5,10 @@ interface Props {
   appointments: Appointment[];
   onSlotClick: (slot: number) => void;
   onRemoveSlot: (slot: number) => void;
+  onPrintSlot?: (slot: number) => void;
 }
 
-export function DailyGrid({ appointments, onSlotClick, onRemoveSlot }: Props) {
+export function DailyGrid({ appointments, onSlotClick, onRemoveSlot, onPrintSlot }: Props) {
   const getAppt = (slot: number) => appointments.find(a => a.slot === slot);
   const isAberto = (slot: number) => SLOTS_ABERTOS.includes(slot);
 
@@ -31,6 +32,7 @@ export function DailyGrid({ appointments, onSlotClick, onRemoveSlot }: Props) {
               variant="rural"
               onClick={() => onSlotClick(slot)}
               onRemove={() => onRemoveSlot(slot)}
+              onPrint={onPrintSlot ? () => onPrintSlot(slot) : undefined}
             />
           ))}
         </div>
@@ -55,6 +57,7 @@ export function DailyGrid({ appointments, onSlotClick, onRemoveSlot }: Props) {
               isAberto={isAberto(slot)}
               onClick={() => onSlotClick(slot)}
               onRemove={() => onRemoveSlot(slot)}
+              onPrint={onPrintSlot ? () => onPrintSlot(slot) : undefined}
             />
           ))}
         </div>

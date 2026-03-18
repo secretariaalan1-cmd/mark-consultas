@@ -60,6 +60,14 @@ export function useScheduler() {
     refreshDays();
   }, [selectedDate, refreshDays]);
 
+  const markAsPrinted = useCallback((slot: number) => {
+    const appt = appointments.find(a => a.slot === slot);
+    if (!appt) return;
+    const updatedAppt = { ...appt, printed: true };
+    const updated = saveAppointment(updatedAppt);
+    setAppointments(updated);
+  }, [appointments]);
+
   const checkDuplicate = useCallback((patientId: string, excludeSlot?: number) => {
     return isPatientBookedOnDate(selectedDate, patientId, excludeSlot);
   }, [selectedDate]);
@@ -95,7 +103,7 @@ export function useScheduler() {
 
   return {
     selectedDate, changeDate,
-    appointments, bookSlot, cancelSlot, resetDay, copyDay,
+    appointments, bookSlot, cancelSlot, resetDay, copyDay, markAsPrinted,
     checkDuplicate, search,
     patients, refreshPatients, refreshAll, updatePatient, removePatient,
     manhaAppts, tardeAppts, livresManha, livresTarde,

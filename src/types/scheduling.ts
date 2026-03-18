@@ -17,6 +17,7 @@ export interface Appointment {
   psf: string;
   reason: string;
   type: 'NORMAL' | 'RETORNO';
+  printed?: boolean;
 }
 
 export type Shift = 'manha' | 'tarde';
