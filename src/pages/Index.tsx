@@ -108,8 +108,8 @@ export default function Index() {
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-lg font-semibold tracking-tight uppercase">Saúde da Mulher</h1>
-              <p className="text-xs text-muted-foreground">Agendamento de Consultas — Camocim</p>
+              <h1 className="text-xl font-black tracking-tight uppercase text-primary">SAÚDE DA MULHER - VERSÃO NOVA</h1>
+              <p className="text-xs text-muted-foreground">Sistema de Agendamento — Camocim</p>
             </div>
             <div className="flex items-center gap-2">
               <ExcelImport onImport={handleImport} />
