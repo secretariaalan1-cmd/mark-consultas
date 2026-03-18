@@ -13,14 +13,22 @@ export function savePatients(patients: Patient[]) {
   localStorage.setItem(PATIENTS_KEY, JSON.stringify(patients));
 }
 
+function normalizeName(name: string): string {
+  return name.trim().toUpperCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[.]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 export function upsertPatient(patient: Patient): Patient[] {
   const patients = getPatients();
+  const normalizedName = normalizeName(patient.name);
   const idx = patients.findIndex(
-    p => (p.susCard && p.susCard === patient.susCard) || 
-         (p.name === patient.name && p.dob === patient.dob)
+    p => (p.susCard && patient.susCard && p.susCard === patient.susCard) || 
+         normalizeName(p.name) === normalizedName
   );
   if (idx >= 0) {
-    patients[idx] = { ...patients[idx], ...patient };
+    patients[idx] = { ...patients[idx], ...patient, id: patients[idx].id };
   } else {
     patients.push(patient);
   }
