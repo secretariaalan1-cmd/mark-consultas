@@ -6,7 +6,7 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 15);
 }
 
-function normalizeDate(val: unknown): string {
+function normalizeDateStr(val: unknown): string {
   if (!val) return '';
   if (typeof val === 'number') {
     const d = XLSX.SSF.parse_date_code(val);
@@ -23,6 +23,18 @@ function normalizeDate(val: unknown): string {
   return s;
 }
 
+function toIsoDate(val: unknown): string | null {
+  if (!val) return null;
+  const s = normalizeDateStr(val).split('/');
+  if (s.length === 3) {
+    const d = s[0].padStart(2, '0');
+    const m = s[1].padStart(2, '0');
+    const y = s[2].length === 2 ? '20' + s[2] : s[2];
+    return `${y}-${m}-${d}`;
+  }
+  return null;
+}
+
 function normalizeName(name: string): string {
   return name.trim().toUpperCase()
     .replace(/\s+/g, ' ')
@@ -34,7 +46,6 @@ function extractDateFromContent(rows: unknown[][]): string | null {
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     for (const cell of rows[i]) {
       const s = String(cell || '');
-      // Match "DATA: DD/MM/YYYY" or "DATA: DD/MM/YY"
       const match = s.match(/DATA[:\s]*(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/i);
       if (match) {
         const day = match[1].padStart(2, '0');
@@ -47,33 +58,6 @@ function extractDateFromContent(rows: unknown[][]): string | null {
   return null;
 }
 
-function extractShiftFromContent(rows: unknown[][]): 'manha' | 'tarde' | 'ambos' {
-  for (let i = 0; i < Math.min(rows.length, 15); i++) {
-    for (const cell of rows[i]) {
-      const s = String(cell || '').toLowerCase();
-      if (s.includes('horário') || s.includes('horario')) {
-        // Check if contains both morning and afternoon
-        const hasMorning = /07[:h]|7[:h]30/i.test(s);
-        const hasAfternoon = /13[:h]|14[:h]/i.test(s);
-        if (hasMorning && hasAfternoon) return 'ambos';
-        if (hasAfternoon) return 'tarde';
-        if (hasMorning) return 'manha';
-      }
-    }
-  }
-  return 'manha';
-}
-
-function isAfternoonTime(val: unknown): boolean {
-  const s = String(val || '').trim();
-  const hourMatch = s.match(/^(\d{1,2})[:\.]?/);
-  if (hourMatch) {
-    const hour = Number(hourMatch[1]);
-    return hour >= 12;
-  }
-  return false;
-}
-
 function extractDateFromSheetName(name: string): string | null {
   const match = name.match(/(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/);
   if (match) {
@@ -82,6 +66,13 @@ function extractDateFromSheetName(name: string): string | null {
     const year = match[3] ? (match[3].length === 2 ? '20' + match[3] : match[3]) : new Date().getFullYear().toString();
     return `${year}-${month}-${day}`;
   }
+  return null;
+}
+
+function detectShift(val: string): 'manha' | 'tarde' | null {
+  const s = val.toLowerCase();
+  if (s.includes('manhã') || s.includes('manha') || s.includes('08:') || s.includes('07:')) return 'manha';
+  if (s.includes('tarde') || s.includes('14:') || s.includes('13:')) return 'tarde';
   return null;
 }
 
@@ -97,15 +88,13 @@ export function importExcel(file: ArrayBuffer): ImportResult {
   const existingPatients = getPatients();
   const patientMap = new Map<string, Patient>();
 
-  // Index existing patients by normalized name
   existingPatients.forEach(p => {
     const nameKey = normalizeName(p.name);
     patientMap.set(nameKey, p);
     if (p.susCard) patientMap.set(`sus:${p.susCard}`, p);
   });
 
-  // Collect appointments per date to handle merging
-  const dateAppointments = new Map<string, Appointment[]>();
+  const dateToAppts = new Map<string, Appointment[]>();
   let sheetsProcessed = 0;
 
   for (const sheetName of wb.SheetNames) {
@@ -113,19 +102,14 @@ export function importExcel(file: ArrayBuffer): ImportResult {
     const rows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
     if (rows.length < 3) continue;
 
-    // Extract date from content first, fall back to sheet name
-    const date = extractDateFromContent(rows) || extractDateFromSheetName(sheetName);
-    if (!date) continue;
-    
-    const shift = extractShiftFromContent(rows);
+    const sheetWideDate = extractDateFromContent(rows) || extractDateFromSheetName(sheetName);
     sheetsProcessed++;
 
-    // Find header row
+    // Find header
     let headerIdx = -1;
-    let timeColIdx = -1;
-    for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    for (let i = 0; i < Math.min(rows.length, 25); i++) {
       const row = rows[i].map(c => String(c).toLowerCase());
-      if (row.some(c => c.includes('nome') || c.includes('name'))) {
+      if (row.some(c => c.includes('nome') || c.includes('paciente'))) {
         headerIdx = i;
         break;
       }
@@ -133,34 +117,29 @@ export function importExcel(file: ArrayBuffer): ImportResult {
     if (headerIdx === -1) continue;
 
     const headers = rows[headerIdx].map(c => String(c).toLowerCase().trim());
-    const nameCol = headers.findIndex(h => h.includes('nome') || h.includes('name'));
+    const nameCol = headers.findIndex(h => h.includes('nome') || h.includes('paciente'));
     const susCol = headers.findIndex(h => h.includes('sus') || h.includes('cartão') || h.includes('cartao'));
     const dobCol = headers.findIndex(h => h.includes('nascimento') || h.includes('nasc'));
-    const psfCol = headers.findIndex(h => h.includes('psf'));
-    const motivoCol = headers.findIndex(h => h.includes('motivo') || h.includes('reason'));
-    const numCol = headers.findIndex(h => h.includes('nº') || h.includes('n°') || h.includes('num') || h === 'nº');
-    timeColIdx = headers.findIndex(h => h.includes('horário') || h.includes('horario') || h.includes('chegada'));
-
-    if (!dateAppointments.has(date)) {
-      dateAppointments.set(date, []);
-    }
-    const dayAppts = dateAppointments.get(date)!;
-
-    let morningCount = dayAppts.filter(a => a.slot <= 15).length;
-    let afternoonCount = dayAppts.filter(a => a.slot >= 16).length;
+    const psfCol = headers.findIndex(h => h.includes('psf') || h.includes('unidade'));
+    const motivoCol = headers.findIndex(h => h.includes('motivo') || h.includes('queixa') || h.includes('observação'));
+    const dateCol = headers.findIndex(h => h === 'data' || h.includes('data atendimento') || h.includes('data da consulta'));
+    const numCol = headers.findIndex(h => h.includes('nº') || h.includes('n°') || h.includes('num') || h === 'vaga' || h === 'slot');
+    const periodCol = headers.findIndex(h => h.includes('período') || h.includes('periodo') || h.includes('turno') || h.includes('horário'));
 
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       const rawName = nameCol >= 0 ? String(row[nameCol] || '').trim() : '';
       if (!rawName || rawName.length < 2) continue;
 
+      const dateStr = dateCol >= 0 ? toIsoDate(row[dateCol]) : sheetWideDate;
+      if (!dateStr) continue;
+
       const name = rawName.toUpperCase();
       const susCard = susCol >= 0 ? String(row[susCol] || '').trim() : '';
-      const dob = dobCol >= 0 ? normalizeDate(row[dobCol]) : '';
+      const dob = dobCol >= 0 ? normalizeDateStr(row[dobCol]) : '';
       const psf = psfCol >= 0 ? String(row[psfCol] || '').trim().toUpperCase() : '';
       const reason = motivoCol >= 0 ? String(row[motivoCol] || '').trim() : '';
 
-      // Find or create patient - deduplicate by SUS card first, then by normalized name
       const nameKey = normalizeName(name);
       let patient = (susCard && patientMap.get(`sus:${susCard}`)) || patientMap.get(nameKey);
       
@@ -169,46 +148,47 @@ export function importExcel(file: ArrayBuffer): ImportResult {
         patientMap.set(nameKey, patient);
         if (susCard) patientMap.set(`sus:${susCard}`, patient);
       } else {
-        // Update with new info if available
         if (susCard && !patient.susCard) { patient.susCard = susCard; patientMap.set(`sus:${susCard}`, patient); }
         if (psf && !patient.psf) patient.psf = psf;
         if (dob && !patient.dob) patient.dob = dob;
       }
 
-      // Determine slot: check if this row is morning or afternoon
+      if (!dateToAppts.has(dateStr)) dateToAppts.set(dateStr, []);
+      const dayAppts = dateToAppts.get(dateStr)!;
+
+      // Determine slot
       let isAfternoon = false;
-      if (shift === 'ambos' && timeColIdx >= 0) {
-        isAfternoon = isAfternoonTime(row[timeColIdx]);
-      } else if (shift === 'tarde') {
-        isAfternoon = true;
-      }
-      // Also check time column even for non-"ambos" sheets
-      if (shift === 'manha' && timeColIdx >= 0 && isAfternoonTime(row[timeColIdx])) {
-        isAfternoon = true;
+      if (periodCol >= 0) {
+        const pStr = String(row[periodCol]);
+        const dShift = detectShift(pStr);
+        if (dShift === 'tarde') isAfternoon = true;
       }
 
-      let slotNum: number;
-      if (isAfternoon) {
-        afternoonCount++;
-        slotNum = 15 + afternoonCount; // 16, 17, 18...
-      } else {
-        morningCount++;
-        slotNum = morningCount; // 1, 2, 3...
+      let slotNum = numCol >= 0 ? Number(row[numCol]) : 0;
+      if (isNaN(slotNum) || slotNum <= 0) {
+        const morningCount = dayAppts.filter(a => a.slot <= 15).length;
+        const afternoonCount = dayAppts.filter(a => a.slot >= 16).length;
+        if (isAfternoon) slotNum = 16 + afternoonCount;
+        else slotNum = 1 + morningCount;
       }
 
-      // Prevent slot overflow
-      if (!isAfternoon && slotNum > 15) continue;
-      if (isAfternoon && slotNum > 32) continue;
+      if (slotNum > 32) continue; // safety cap
 
-      // Skip if slot already occupied for this date
-      if (dayAppts.some(a => a.slot === slotNum)) continue;
-
-      // Skip if patient already booked on this date
+      // Avoid double booking the same slot or same patient on same day
+      if (dayAppts.some(a => a.slot === slotNum)) {
+        // Find next free slot in that period
+        if (isAfternoon) {
+          for (let s = 16; s <= 32; s++) if (!dayAppts.some(a => a.slot === s)) { slotNum = s; break; }
+        } else {
+          for (let s = 1; s <= 15; s++) if (!dayAppts.some(a => a.slot === s)) { slotNum = s; break; }
+        }
+      }
+      
       if (dayAppts.some(a => a.patientId === patient!.id)) continue;
 
       dayAppts.push({
         slot: slotNum,
-        date,
+        date: dateStr,
         patientId: patient.id,
         patientName: patient.name,
         susCard: patient.susCard,
@@ -220,31 +200,30 @@ export function importExcel(file: ArrayBuffer): ImportResult {
     }
   }
 
-  // Save all patients
-  const patients = Array.from(new Map(
-    Array.from(patientMap.entries())
-      .filter(([key]) => !key.startsWith('sus:'))
-      .map(([, p]) => [p.id, p])
+  // Final merge and save
+  const finalPatients = Array.from(new Map(
+    Array.from(patientMap.entries()).filter(([k]) => !k.startsWith('sus:')).map(([, p]) => [p.id, p])
   ).values());
-  savePatients(patients);
+  savePatients(finalPatients);
 
-  // Save appointments and register open days - merge with existing
-  const allAppointments: Appointment[] = [];
   const existingAllAppts = getAppointments();
+  const allDatesToMerge = Array.from(dateToAppts.keys());
   
-  for (const [date, appts] of dateAppointments) {
+  // Keep existing appts for dates NOT in the import
+  let finalAppts = existingAllAppts.filter(a => !allDatesToMerge.includes(a.date));
+  
+  // Add all appts from import
+  for (const [date, appts] of dateToAppts) {
     addOpenDay(date);
-    // Remove existing appointments for this date before adding new ones
-    const otherAppts = existingAllAppts.filter(a => a.date !== date);
-    const merged = [...otherAppts, ...appts];
-    localStorage.setItem('medsched_appointments', JSON.stringify(merged));
-    allAppointments.push(...appts);
+    finalAppts.push(...appts);
   }
 
+  localStorage.setItem('medsched_appointments', JSON.stringify(finalAppts));
+
   return {
-    patients,
-    appointments: allAppointments,
+    patients: finalPatients,
+    appointments: finalAppts,
     sheetsProcessed,
-    patientsImported: patients.length,
+    patientsImported: finalPatients.length,
   };
 }
