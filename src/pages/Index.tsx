@@ -80,12 +80,32 @@ export default function Index() {
   };
 
   const handleCreateDay = () => {
-    const dateStr = prompt('Digite a data do atendimento (AAAA-MM-DD):');
-    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      scheduler.createDay(dateStr);
-      toast.success(`Dia ${dateStr} liberado para atendimento!`);
-    } else if (dateStr) {
-      toast.error('Formato inválido. Use AAAA-MM-DD (ex: 2025-03-20)');
+    const dateStr = prompt('Digite a data do atendimento (DD/MM/AAAA ou AAAA-MM-DD):');
+    if (!dateStr) return;
+    
+    let isoDate = '';
+    // Try DD/MM/YYYY
+    const brMatch = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (brMatch) {
+      const day = brMatch[1].padStart(2, '0');
+      const month = brMatch[2].padStart(2, '0');
+      const year = brMatch[3].length === 2 ? '20' + brMatch[3] : brMatch[3];
+      isoDate = `${year}-${month}-${day}`;
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      isoDate = dateStr;
+    }
+    
+    if (isoDate) {
+      // Check if day already exists
+      if (scheduler.openDays.includes(isoDate)) {
+        scheduler.changeDate(isoDate);
+        toast.info(`Dia ${isoDate} já está liberado.`);
+        return;
+      }
+      scheduler.createDay(isoDate);
+      toast.success(`Dia ${isoDate} liberado para atendimento!`);
+    } else {
+      toast.error('Formato inválido. Use DD/MM/AAAA ou AAAA-MM-DD');
     }
   };
 
