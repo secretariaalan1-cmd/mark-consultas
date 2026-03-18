@@ -10,7 +10,7 @@ interface Props {
   onRemove: () => void;
 }
 
-export function SlotCard({ slot, appointment, variant, onClick, onRemove }: Props) {
+export function SlotCard({ slot, appointment, variant, isAberto, onClick, onRemove }: Props) {
   const isEmpty = !appointment;
   const accentClass = variant === 'rural' ? 'border-l-rural' : 'border-l-cidade';
 
