@@ -19,11 +19,11 @@ function toIso(year: number, month: number, day: number): string {
 
 export function CalendarPicker({ selectedDate, onChange, daysWithAppts }: Props) {
   const [viewYear, setViewYear] = useState(() => {
-    if (selectedDate) return Number(selectedDate.split('-')[0]);
+    if (selectedDate) return Number(selectedDate.split('-')[0]) || new Date().getFullYear();
     return new Date().getFullYear();
   });
   const [viewMonth, setViewMonth] = useState(() => {
-    if (selectedDate) return Number(selectedDate.split('-')[1]) - 1;
+    if (selectedDate) return (Number(selectedDate.split('-')[1]) - 1) || new Date().getMonth();
     return new Date().getMonth();
   });
 
@@ -75,7 +75,7 @@ export function CalendarPicker({ selectedDate, onChange, daysWithAppts }: Props)
           <ChevronLeft className="w-4 h-4" />
         </button>
         <span className="text-sm font-semibold tracking-tight">
-          {MONTH_NAMES[viewMonth]} {viewYear}
+          {MONTH_NAMES[viewMonth] || 'Mês'} {viewYear}
         </span>
         <button onClick={nextMonth} className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground">
           <ChevronRight className="w-4 h-4" />

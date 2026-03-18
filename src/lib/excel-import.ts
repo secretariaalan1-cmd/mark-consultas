@@ -126,8 +126,19 @@ export function importExcel(file: ArrayBuffer): ImportResult {
     const numCol = headers.findIndex(h => h.includes('nº') || h.includes('n°') || h.includes('num') || h === 'vaga' || h === 'slot');
     const periodCol = headers.findIndex(h => h.includes('período') || h.includes('periodo') || h.includes('turno') || h.includes('horário'));
 
+    let currentShiftIsAfternoon = false;
+
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const row = rows[i];
+      const rowStr = row.join(' ').toLowerCase();
+
+      // Detect shift change in row content (e.g. a separator row saying "TARDE" or "CIDADE")
+      if (rowStr.includes('tarde') || rowStr.includes('cidade') || rowStr.includes('14:00') || rowStr.includes('13:00')) {
+        currentShiftIsAfternoon = true;
+      } else if (rowStr.includes('manhã') || rowStr.includes('manha') || rowStr.includes('rural') || rowStr.includes('08:00') || rowStr.includes('07:00')) {
+        currentShiftIsAfternoon = false;
+      }
+
       const rawName = nameCol >= 0 ? String(row[nameCol] || '').trim() : '';
       if (!rawName || rawName.length < 2) continue;
 
@@ -157,11 +168,12 @@ export function importExcel(file: ArrayBuffer): ImportResult {
       const dayAppts = dateToAppts.get(dateStr)!;
 
       // Determine slot
-      let isAfternoon = false;
+      let isAfternoon = currentShiftIsAfternoon;
       if (periodCol >= 0) {
         const pStr = String(row[periodCol]);
         const dShift = detectShift(pStr);
         if (dShift === 'tarde') isAfternoon = true;
+        if (dShift === 'manha') isAfternoon = false;
       }
 
       let slotNum = numCol >= 0 ? Number(row[numCol]) : 0;
