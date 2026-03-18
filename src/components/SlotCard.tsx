@@ -5,6 +5,7 @@ interface Props {
   slot: number;
   appointment?: Appointment;
   variant: 'rural' | 'cidade';
+  isAberto?: boolean;
   onClick: () => void;
   onRemove: () => void;
 }
