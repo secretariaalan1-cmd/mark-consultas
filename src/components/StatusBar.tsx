@@ -5,7 +5,7 @@ interface Props {
 }
 
 export function StatusBar({ total, livresManha, livresTarde }: Props) {
-  const ocupadas = 30 - livresManha - livresTarde;
+  const ocupadas = 32 - livresManha - livresTarde;
   const livresTotal = livresManha + livresTarde;
 
   return (
