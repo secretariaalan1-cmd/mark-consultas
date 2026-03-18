@@ -7,8 +7,7 @@ import { ExcelImport } from '@/components/ExcelImport';
 import { CalendarPicker } from '@/components/CalendarPicker';
 import { StatusBar } from '@/components/StatusBar';
 import { importExcel } from '@/lib/excel-import';
-import { exportToExcel } from '@/lib/excel-export';
-import { generatePDF } from '@/lib/pdf-generator';
+import { exportToExcel, exportDayToExcel } from '@/lib/excel-export';
 import { downloadBackup, importBackup } from '@/lib/csv-backup';
 import { FileText, RotateCcw, Calendar, Users, Copy, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
@@ -37,8 +36,9 @@ export default function Index() {
     toast.success(`${result.patientsImported} pacientes e ${result.appointments.length} consultas importados.`);
   };
 
-  const handlePDF = () => {
-    generatePDF(scheduler.selectedDate, scheduler.appointments);
+  const handleExportDayExcel = () => {
+    exportDayToExcel(scheduler.selectedDate, scheduler.appointments);
+    toast.success('Agenda do dia exportada para Excel!');
   };
 
   const handleExportExcel = () => {
@@ -98,7 +98,7 @@ export default function Index() {
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-lg font-semibold tracking-tight">MedSched</h1>
+              <h1 className="text-lg font-semibold tracking-tight">Mark Consultas</h1>
               <p className="text-xs text-muted-foreground">Agendamento de Consultas — Camocim</p>
             </div>
             <div className="flex items-center gap-2">
@@ -140,8 +140,8 @@ export default function Index() {
                 daysWithAppts={scheduler.daysWithAppts}
               />
               <div className="mt-3 flex gap-2">
-                <button onClick={handlePDF} className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium flex-1">
-                  <FileText className="w-4 h-4" /> PDF
+                <button onClick={handleExportDayExcel} className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-medium flex-1" title="Exportar agenda do dia para Excel">
+                  <FileSpreadsheet className="w-4 h-4" /> Excel
                 </button>
                 <button onClick={handleDuplicateDay} className="flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-muted-foreground" title="Duplicar agenda de outro dia">
                   <Copy className="w-3.5 h-3.5" />

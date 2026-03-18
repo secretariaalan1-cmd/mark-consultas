@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Props {
@@ -18,17 +18,23 @@ function toIso(year: number, month: number, day: number): string {
 }
 
 export function CalendarPicker({ selectedDate, onChange, daysWithAppts }: Props) {
-  const initialDate = useMemo(() => {
+  const [viewYear, setViewYear] = useState(() => {
+    if (selectedDate) return Number(selectedDate.split('-')[0]);
+    return new Date().getFullYear();
+  });
+  const [viewMonth, setViewMonth] = useState(() => {
+    if (selectedDate) return Number(selectedDate.split('-')[1]) - 1;
+    return new Date().getMonth();
+  });
+
+  // Sync view when selectedDate changes from outside (e.g. from Index)
+  useEffect(() => {
     if (selectedDate) {
       const [y, m] = selectedDate.split('-').map(Number);
-      return { year: y, month: m - 1 };
+      setViewYear(y);
+      setViewMonth(m - 1);
     }
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  }, []);
-
-  const [viewYear, setViewYear] = useState(initialDate.year);
-  const [viewMonth, setViewMonth] = useState(initialDate.month);
+  }, [selectedDate]);
 
   const today = new Date().toISOString().split('T')[0];
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
