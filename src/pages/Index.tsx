@@ -89,7 +89,7 @@ export default function Index() {
     const weekdays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
     const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     const date = new Date(Number(y), Number(m) - 1, Number(day));
-    return `${weekdays[date.getDay()]}, ${day} de ${months[parseInt(m) - 1]} de ${y}`;
+    return `${weekdays[date.getDay()]}, ${day} de ${months[Number(m) - 1]} de ${y}`;
   };
 
   return (

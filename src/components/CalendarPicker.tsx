@@ -31,8 +31,11 @@ export function CalendarPicker({ selectedDate, onChange, daysWithAppts }: Props)
   useEffect(() => {
     if (selectedDate) {
       const [y, m] = selectedDate.split('-').map(Number);
-      setViewYear(y);
-      setViewMonth(m - 1);
+      const selMonth = m - 1;
+      if (y !== viewYear || selMonth !== viewMonth) {
+        setViewYear(y);
+        setViewMonth(selMonth);
+      }
     }
   }, [selectedDate]);
 
