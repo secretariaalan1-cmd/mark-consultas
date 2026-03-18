@@ -128,6 +128,18 @@ export function isOpenDay(date: string): boolean {
   return getOpenDays().includes(date);
 }
 
+export function getPatientLastAppointment(patientId: string, beforeDate?: string): Appointment | null {
+  const all = getAppointments();
+  const patientAppts = all.filter(a => a.patientId === patientId);
+  if (beforeDate) {
+    const filtered = patientAppts.filter(a => a.date < beforeDate);
+    if (filtered.length === 0) return null;
+    return filtered.sort((a, b) => b.date.localeCompare(a.date))[0];
+  }
+  if (patientAppts.length === 0) return null;
+  return patientAppts.sort((a, b) => b.date.localeCompare(a.date))[0];
+}
+
 export function saveOpenDays(days: string[]) {
   localStorage.setItem(OPEN_DAYS_KEY, JSON.stringify(days));
 }

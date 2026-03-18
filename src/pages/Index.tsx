@@ -98,7 +98,7 @@ export default function Index() {
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-lg font-semibold tracking-tight">Mark Consultas</h1>
+              <h1 className="text-lg font-semibold tracking-tight">saúde da mulher</h1>
               <p className="text-xs text-muted-foreground">Agendamento de Consultas — Camocim</p>
             </div>
             <div className="flex items-center gap-2">

@@ -41,13 +41,23 @@ export function CalendarPicker({ selectedDate, onChange, daysWithAppts }: Props)
   const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
 
   const prevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
-    else setViewMonth(m => m - 1);
+    let year = viewYear;
+    let month = viewMonth;
+    if (viewMonth === 0) { month = 11; year -= 1; }
+    else month -= 1;
+    setViewMonth(month);
+    setViewYear(year);
+    onChange(toIso(year, month, 1));
   };
 
   const nextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
-    else setViewMonth(m => m + 1);
+    let year = viewYear;
+    let month = viewMonth;
+    if (viewMonth === 11) { month = 0; year += 1; }
+    else month += 1;
+    setViewMonth(month);
+    setViewYear(year);
+    onChange(toIso(year, month, 1));
   };
 
   const cells: (number | null)[] = [];

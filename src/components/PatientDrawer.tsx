@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CalendarClock } from 'lucide-react';
+import { getPatientLastAppointment } from '@/lib/storage';
 
 interface Props {
   open: boolean;
@@ -31,6 +32,8 @@ export function PatientDrawer({ open, onClose, slot, date, existingAppt, onSave,
   const [patientId, setPatientId] = useState('');
   const [suggestions, setSuggestions] = useState<Patient[]>([]);
   const [duplicateWarning, setDuplicateWarning] = useState(false);
+  const [lastApptDate, setLastApptDate] = useState<string | null>(null);
+  const [isRetornoAuto, setIsRetornoAuto] = useState(false);
 
   useEffect(() => {
     if (existingAppt) {
@@ -40,10 +43,13 @@ export function PatientDrawer({ open, onClose, slot, date, existingAppt, onSave,
       setPsf(existingAppt.psf);
       setReason(existingAppt.reason);
       setType(existingAppt.type);
+      const last = getPatientLastAppointment(existingAppt.patientId, existingAppt.date);
+      setLastApptDate(last?.date || null);
       setPatientId(existingAppt.patientId);
     } else {
       setName(''); setSusCard(''); setDob(''); setPsf('');
       setReason(''); setType('NORMAL'); setPatientId(genId());
+      setLastApptDate(null);
     }
     setSuggestions([]);
     setDuplicateWarning(false);
@@ -70,6 +76,12 @@ export function PatientDrawer({ open, onClose, slot, date, existingAppt, onSave,
     } else {
       setDuplicateWarning(false);
     }
+    
+    const last = getPatientLastAppointment(p.id, date);
+    setLastApptDate(last?.date || null);
+    
+    // Check if it should be RETORNO (e.g. within 30 days - optional but helpful)
+    // For now just show the date as requested.
   };
 
   const handleSave = () => {
@@ -111,6 +123,13 @@ export function PatientDrawer({ open, onClose, slot, date, existingAppt, onSave,
             <div className="flex items-center gap-2 p-2.5 rounded-md bg-destructive/10 text-destructive text-sm">
               <AlertCircle className="w-4 h-4 shrink-0" />
               Paciente já agendado para este dia.
+            </div>
+          )}
+          
+          {lastApptDate && (
+            <div className="flex items-center gap-2 p-2.5 rounded-md bg-blue-50 text-blue-700 text-sm border border-blue-100">
+              <CalendarClock className="w-4 h-4 shrink-0" />
+              <span>Última consulta: <strong>{lastApptDate.split('-').reverse().join('/')}</strong></span>
             </div>
           )}
 
