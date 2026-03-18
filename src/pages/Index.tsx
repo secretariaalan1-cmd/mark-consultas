@@ -10,7 +10,7 @@ import { importExcel } from '@/lib/excel-import';
 import { exportToExcel } from '@/lib/excel-export';
 import { generatePDF } from '@/lib/pdf-generator';
 import { downloadBackup, importBackup } from '@/lib/csv-backup';
-import { FileText, RotateCcw, Calendar, Users, Copy, Download, Upload, Plus, FileSpreadsheet } from 'lucide-react';
+import { FileText, RotateCcw, Calendar, Users, Copy, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Tab = 'agenda' | 'pacientes';
@@ -38,7 +38,6 @@ export default function Index() {
   };
 
   const handlePDF = () => {
-    if (!scheduler.selectedDate) return;
     generatePDF(scheduler.selectedDate, scheduler.appointments);
   };
 
@@ -48,8 +47,10 @@ export default function Index() {
   };
 
   const handleResetDay = () => {
-    scheduler.resetDay();
-    toast.success('Dia limpo com sucesso.');
+    if (confirm('Limpar todos os agendamentos deste dia?')) {
+      scheduler.resetDay();
+      toast.success('Dia limpo com sucesso.');
+    }
   };
 
   const handleDuplicateDay = () => {
@@ -79,36 +80,6 @@ export default function Index() {
     if (csvInputRef.current) csvInputRef.current.value = '';
   };
 
-  const handleCreateDay = () => {
-    const dateStr = prompt('Digite a data do atendimento (DD/MM/AAAA ou AAAA-MM-DD):');
-    if (!dateStr) return;
-    
-    let isoDate = '';
-    // Try DD/MM/YYYY
-    const brMatch = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-    if (brMatch) {
-      const day = brMatch[1].padStart(2, '0');
-      const month = brMatch[2].padStart(2, '0');
-      const year = brMatch[3].length === 2 ? '20' + brMatch[3] : brMatch[3];
-      isoDate = `${year}-${month}-${day}`;
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      isoDate = dateStr;
-    }
-    
-    if (isoDate) {
-      // Check if day already exists
-      if (scheduler.openDays.includes(isoDate)) {
-        scheduler.changeDate(isoDate);
-        toast.info(`Dia ${isoDate} já está liberado.`);
-        return;
-      }
-      scheduler.createDay(isoDate);
-      toast.success(`Dia ${isoDate} liberado para atendimento!`);
-    } else {
-      toast.error('Formato inválido. Use DD/MM/AAAA ou AAAA-MM-DD');
-    }
-  };
-
   const existingAppt = selectedSlot
     ? scheduler.appointments.find(a => a.slot === selectedSlot)
     : undefined;
@@ -132,54 +103,27 @@ export default function Index() {
             </div>
             <div className="flex items-center gap-2">
               <ExcelImport onImport={handleImport} />
-              <button
-                onClick={handleExportExcel}
-                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-all font-medium"
-                title="Exportar planilha Excel (.xlsx)"
-              >
+              <button onClick={handleExportExcel} className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-all font-medium" title="Exportar planilha Excel (.xlsx)">
                 <FileSpreadsheet className="w-4 h-4" />
                 <span className="hidden sm:inline">Exportar Excel</span>
               </button>
-              <button
-                onClick={handleExportCSV}
-                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-foreground"
-                title="Exportar backup CSV"
-              >
+              <button onClick={handleExportCSV} className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-foreground" title="Exportar backup CSV">
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Backup</span>
               </button>
               <input ref={csvInputRef} type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
-              <button
-                onClick={() => csvInputRef.current?.click()}
-                className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-foreground"
-                title="Importar backup CSV"
-              >
+              <button onClick={() => csvInputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-foreground" title="Importar backup CSV">
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Importar</span>
               </button>
             </div>
           </div>
 
-          {/* Tabs */}
           <div className="flex items-center gap-1 mb-3">
-            <button
-              onClick={() => setActiveTab('agenda')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                activeTab === 'agenda'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent'
-              }`}
-            >
+            <button onClick={() => setActiveTab('agenda')} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${activeTab === 'agenda' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}>
               <Calendar className="w-3.5 h-3.5" /> Agenda
             </button>
-            <button
-              onClick={() => setActiveTab('pacientes')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                activeTab === 'pacientes'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent'
-              }`}
-            >
+            <button onClick={() => setActiveTab('pacientes')} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${activeTab === 'pacientes' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}>
               <Users className="w-3.5 h-3.5" /> Pacientes ({scheduler.patients.length})
             </button>
           </div>
@@ -189,78 +133,34 @@ export default function Index() {
       <main className="max-w-6xl mx-auto px-4 py-4">
         {activeTab === 'agenda' && (
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Left: Calendar + actions */}
             <div className="lg:w-72 shrink-0">
               <CalendarPicker
                 selectedDate={scheduler.selectedDate}
                 onChange={scheduler.changeDate}
-                openDays={scheduler.openDays}
                 daysWithAppts={scheduler.daysWithAppts}
-                onDeleteDay={scheduler.deleteDay}
               />
-              <div className="mt-3 flex flex-col gap-2">
-                <button
-                  onClick={handleCreateDay}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-md bg-accent text-foreground hover:bg-accent/80 transition-colors font-medium w-full"
-                  title="Liberar novo dia de atendimento"
-                >
-                  <Plus className="w-4 h-4" /> Novo Dia
+              <div className="mt-3 flex gap-2">
+                <button onClick={handlePDF} className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium flex-1">
+                  <FileText className="w-4 h-4" /> PDF
                 </button>
-                {scheduler.selectedDate && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handlePDF}
-                      className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium flex-1"
-                    >
-                      <FileText className="w-4 h-4" /> PDF
-                    </button>
-                    <button
-                      onClick={handleDuplicateDay}
-                      className="flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-muted-foreground"
-                      title="Duplicar agenda de outro dia"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={handleResetDay}
-                      className="flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-destructive"
-                      title="Limpar dia"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
+                <button onClick={handleDuplicateDay} className="flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-muted-foreground" title="Duplicar agenda de outro dia">
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={handleResetDay} className="flex items-center gap-1.5 px-2.5 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-destructive" title="Limpar dia">
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
 
-            {/* Right: Daily grid */}
             <div className="flex-1">
-              {scheduler.selectedDate ? (
-                <>
-                  <div className="text-sm font-medium text-muted-foreground mb-4">
-                    {formatDateDisplay(scheduler.selectedDate)}
-                  </div>
-                  <DailyGrid
-                    appointments={scheduler.appointments}
-                    onSlotClick={handleSlotClick}
-                    onRemoveSlot={scheduler.cancelSlot}
-                  />
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <Calendar className="w-12 h-12 text-muted-foreground/40 mb-4" />
-                  <h2 className="text-lg font-medium text-muted-foreground mb-2">Nenhum dia liberado</h2>
-                  <p className="text-sm text-muted-foreground/70 mb-4">
-                    Clique em "Novo Dia" para liberar uma data de atendimento.
-                  </p>
-                  <button
-                    onClick={handleCreateDay}
-                    className="flex items-center gap-1.5 px-4 py-2.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
-                  >
-                    <Plus className="w-4 h-4" /> Criar Dia de Atendimento
-                  </button>
-                </div>
-              )}
+              <div className="text-sm font-medium text-muted-foreground mb-4">
+                {formatDateDisplay(scheduler.selectedDate)}
+              </div>
+              <DailyGrid
+                appointments={scheduler.appointments}
+                onSlotClick={handleSlotClick}
+                onRemoveSlot={scheduler.cancelSlot}
+              />
             </div>
           </div>
         )}
@@ -274,18 +174,16 @@ export default function Index() {
         )}
       </main>
 
-      {scheduler.selectedDate && (
-        <PatientDrawer
-          open={drawerOpen}
-          onClose={() => { setDrawerOpen(false); setSelectedSlot(null); }}
-          slot={selectedSlot}
-          date={scheduler.selectedDate}
-          existingAppt={existingAppt}
-          onSave={scheduler.bookSlot}
-          onSearch={scheduler.search}
-          checkDuplicate={scheduler.checkDuplicate}
-        />
-      )}
+      <PatientDrawer
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); setSelectedSlot(null); }}
+        slot={selectedSlot}
+        date={scheduler.selectedDate}
+        existingAppt={existingAppt}
+        onSave={scheduler.bookSlot}
+        onSearch={scheduler.search}
+        checkDuplicate={scheduler.checkDuplicate}
+      />
 
       <StatusBar
         total={scheduler.appointments.length}
