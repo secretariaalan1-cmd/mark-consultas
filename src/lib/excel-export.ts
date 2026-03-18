@@ -46,14 +46,15 @@ export function exportDayToExcel(date: string, appointments: Appointment[]) {
   
   sheetData.push([]);
   
-  // Section for afternoon (slots 16-30)
-  sheetData.push(['TARDE — 14:00 — CIDADE / CAMOCIM (Vagas 16–30)']);
+  // Section for afternoon (slots 16-32)
+  sheetData.push(['TARDE — 14:00 — CIDADE / CAMOCIM (Vagas 16–32)']);
   sheetData.push(['Nº', 'NOME', 'CARTÃO SUS', 'DATA NASCIMENTO', 'PSF', 'MOTIVO', 'TIPO', 'ASSINATURA']);
   
-  for (let slot = 16; slot <= 30; slot++) {
+  for (let slot = 16; slot <= 32; slot++) {
     const appt = dayAppts.find(a => a.slot === slot);
+    const yellowMarker = slot >= 30 ? '🟡 ' : '';
     sheetData.push([
-      slot,
+      `${yellowMarker}${slot}`,
       appt?.patientName || '',
       appt?.susCard || '',
       appt?.dob || '',
@@ -68,7 +69,7 @@ export function exportDayToExcel(date: string, appointments: Appointment[]) {
   
   // Column widths
   ws['!cols'] = [
-    { wch: 5 },   // Nº
+    { wch: 8 },   // Nº
     { wch: 35 },  // Nome
     { wch: 20 },  // Cartão SUS
     { wch: 16 },  // Data Nascimento
@@ -140,13 +141,14 @@ export function exportToExcel() {
     sheetData.push([]);
     
     // Afternoon section
-    sheetData.push(['TARDE — 14:00 — CIDADE / CAMOCIM (Vagas 16–30)']);
+    sheetData.push(['TARDE — 14:00 — CIDADE / CAMOCIM (Vagas 16–32)']);
     sheetData.push(['Nº', 'NOME', 'CARTÃO SUS', 'DATA NASCIMENTO', 'PSF', 'MOTIVO', 'TIPO']);
     
-    for (let slot = 16; slot <= 30; slot++) {
+    for (let slot = 16; slot <= 32; slot++) {
       const appt = dayAppts.find(a => a.slot === slot);
+      const yellowMarker = slot >= 30 ? '🟡 ' : '';
       sheetData.push([
-        slot,
+        `${yellowMarker}${slot}`,
         appt?.patientName || '',
         appt?.susCard || '',
         appt?.dob || '',
@@ -162,14 +164,14 @@ export function exportToExcel() {
     sheetData.push([]);
     sheetData.push(['RESUMO']);
     sheetData.push(['Pacientes Manhã:', totalManha, '', 'Vagas Livres Manhã:', 15 - totalManha]);
-    sheetData.push(['Pacientes Tarde:', totalTarde, '', 'Vagas Livres Tarde:', 15 - totalTarde]);
-    sheetData.push(['Total:', totalManha + totalTarde, '', 'Total Vagas Livres:', 30 - totalManha - totalTarde]);
+    sheetData.push(['Pacientes Tarde:', totalTarde, '', 'Vagas Livres Tarde:', 17 - totalTarde]);
+    sheetData.push(['Total:', totalManha + totalTarde, '', 'Total Vagas Livres:', 32 - totalManha - totalTarde]);
     
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
     
     // Set column widths
     ws['!cols'] = [
-      { wch: 5 },   // Nº
+      { wch: 8 },   // Nº
       { wch: 35 },  // Nome
       { wch: 20 },  // Cartão SUS
       { wch: 16 },  // Data Nascimento
@@ -186,7 +188,6 @@ export function exportToExcel() {
       { s: { r: 20, c: 0 }, e: { r: 20, c: 6 } }, // Tarde header
     ];
     
-    // Sheet name: use date format DD-MM
     const [, mm, dd] = day.split('-');
     const sheetName = `${dd}-${mm} ${weekday.substring(0, 3)}`;
     XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
@@ -214,25 +215,16 @@ export function exportToExcel() {
       manha,
       tarde,
       manha + tarde,
-      30 - manha - tarde,
+      32 - manha - tarde,
     ]);
   }
   
   resumoData.push([]);
-  resumoData.push(['TOTAL', '', grandTotalManha, grandTotalTarde, grandTotalManha + grandTotalTarde, (openDays.length * 30) - grandTotalManha - grandTotalTarde]);
+  resumoData.push(['TOTAL', '', grandTotalManha, grandTotalTarde, grandTotalManha + grandTotalTarde, (openDays.length * 32) - grandTotalManha - grandTotalTarde]);
   
   const wsResumo = XLSX.utils.aoa_to_sheet(resumoData);
-  wsResumo['!cols'] = [
-    { wch: 14 },
-    { wch: 18 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 14 },
-  ];
-  wsResumo['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
-  ];
+  wsResumo['!cols'] = [{ wch: 14 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }];
+  wsResumo['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
   XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo Geral');
 
   // ── Sheet: Pacientes ──
@@ -247,19 +239,10 @@ export function exportToExcel() {
   }
   
   const wsPacientes = XLSX.utils.aoa_to_sheet(pacientesData);
-  wsPacientes['!cols'] = [
-    { wch: 35 },
-    { wch: 20 },
-    { wch: 16 },
-    { wch: 15 },
-    { wch: 30 },
-  ];
-  wsPacientes['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
-  ];
+  wsPacientes['!cols'] = [{ wch: 35 }, { wch: 20 }, { wch: 16 }, { wch: 15 }, { wch: 30 }];
+  wsPacientes['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
   XLSX.utils.book_append_sheet(wb, wsPacientes, 'Pacientes');
 
-  // Generate and download
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
