@@ -1,3 +1,4 @@
-# Welcome to your Lovable project
+# Mark Consultas - Versão LocalStorage
+Reversão automática para armazenamento local (pré-Supabase).
 
-TODO: Document your project here
+Reverted on: 2026-04-06
