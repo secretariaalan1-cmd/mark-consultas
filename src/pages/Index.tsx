@@ -1,26 +1,27 @@
 import { useState, useRef } from 'react';
 import { useScheduler } from '@/hooks/useScheduler';
+import { useAuth } from '@/contexts/AuthContext';
 import { DailyGrid } from '@/components/DailyGrid';
 import { PatientDrawer } from '@/components/PatientDrawer';
 import { PatientList } from '@/components/PatientList';
 import { ExcelImport } from '@/components/ExcelImport';
 import { CalendarPicker } from '@/components/CalendarPicker';
 import { StatusBar } from '@/components/StatusBar';
+import { InviteSection } from '@/components/InviteSection';
 import { importExcel } from '@/lib/excel-import';
-import { exportToExcel, exportDayToExcel } from '@/lib/excel-export';
-import { downloadBackup, importBackup } from '@/lib/csv-backup';
+import { exportDayToExcel } from '@/lib/excel-export';
 import { printTicket } from '@/lib/ticket-print';
-import { FileText, RotateCcw, Calendar, Users, Copy, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet, RotateCcw, Calendar, Users, Copy, LogOut, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-type Tab = 'agenda' | 'pacientes';
+type Tab = 'agenda' | 'pacientes' | 'convites';
 
 export default function Index() {
   const scheduler = useScheduler();
+  const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('agenda');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const handleSlotClick = (slot: number) => {
     setSelectedSlot(slot);
@@ -30,21 +31,12 @@ export default function Index() {
   const handleImport = (buffer: ArrayBuffer) => {
     const result = importExcel(buffer);
     scheduler.refreshAll();
-    if (result.appointments.length > 0) {
-      const dates = [...new Set(result.appointments.map(a => a.date))].sort();
-      if (dates[0]) scheduler.changeDate(dates[0]);
-    }
     toast.success(`${result.patientsImported} pacientes e ${result.appointments.length} consultas importados.`);
   };
 
   const handleExportDayExcel = () => {
     exportDayToExcel(scheduler.selectedDate, scheduler.appointments);
     toast.success('Agenda do dia exportada para Excel!');
-  };
-
-  const handleExportExcel = () => {
-    exportToExcel();
-    toast.success('Planilha Excel exportada com sucesso!');
   };
 
   const handleResetDay = () => {
@@ -62,25 +54,6 @@ export default function Index() {
     }
   };
 
-  const handleExportCSV = () => {
-    downloadBackup();
-    toast.success('Backup exportado com sucesso!');
-  };
-
-  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = reader.result as string;
-      const result = importBackup(text);
-      scheduler.refreshAll();
-      toast.success(`Importados: ${result.patients} pacientes, ${result.appointments} agendamentos.`);
-    };
-    reader.readAsText(file);
-    if (csvInputRef.current) csvInputRef.current.value = '';
-  };
-  
   const handlePrintSlot = (slot: number) => {
     const appt = scheduler.appointments.find(a => a.slot === slot);
     if (appt) {
@@ -102,6 +75,14 @@ export default function Index() {
     return `${weekdays[date.getDay()]}, ${day} de ${months[Number(m) - 1]} de ${y}`;
   };
 
+  if (scheduler.loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Carregando agenda...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-12">
       <header className="bg-card border-b border-border sticky top-0 z-40">
@@ -113,18 +94,9 @@ export default function Index() {
             </div>
             <div className="flex items-center gap-2">
               <ExcelImport onImport={handleImport} />
-              <button onClick={handleExportExcel} className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-all font-medium" title="Exportar planilha Excel (.xlsx)">
-                <FileSpreadsheet className="w-4 h-4" />
-                <span className="hidden sm:inline">Exportar Excel</span>
-              </button>
-              <button onClick={handleExportCSV} className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-foreground" title="Exportar backup CSV">
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Backup</span>
-              </button>
-              <input ref={csvInputRef} type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
-              <button onClick={() => csvInputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-foreground" title="Importar backup CSV">
-                <Upload className="w-4 h-4" />
-                <span className="hidden sm:inline">Importar</span>
+              <button onClick={signOut} className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-md bg-card slot-shadow hover:slot-shadow-hover transition-all text-muted-foreground" title="Sair">
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sair</span>
               </button>
             </div>
           </div>
@@ -135,6 +107,9 @@ export default function Index() {
             </button>
             <button onClick={() => setActiveTab('pacientes')} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${activeTab === 'pacientes' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}>
               <Users className="w-3.5 h-3.5" /> Pacientes ({scheduler.patients.length})
+            </button>
+            <button onClick={() => setActiveTab('convites')} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${activeTab === 'convites' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}>
+              <Share2 className="w-3.5 h-3.5" /> Convites
             </button>
           </div>
         </div>
@@ -183,6 +158,8 @@ export default function Index() {
             onDelete={scheduler.removePatient}
           />
         )}
+
+        {activeTab === 'convites' && <InviteSection />}
       </main>
 
       <PatientDrawer
@@ -194,6 +171,7 @@ export default function Index() {
         onSave={scheduler.bookSlot}
         onSearch={scheduler.search}
         checkDuplicate={scheduler.checkDuplicate}
+        getLastAppointment={scheduler.getLastAppointment}
       />
 
       <StatusBar

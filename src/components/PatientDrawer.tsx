@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CalendarClock } from 'lucide-react';
-import { getPatientLastAppointment } from '@/lib/storage';
 
 interface Props {
   open: boolean;
@@ -14,26 +13,28 @@ interface Props {
   date: string;
   existingAppt?: Appointment;
   onSave: (appt: Appointment) => void;
-  onSearch: (q: string) => Patient[];
-  checkDuplicate: (patientId: string, excludeSlot?: number) => boolean;
+  onSearch: (q: string) => Promise<Patient[]>;
+  checkDuplicate: (patientName: string, excludeSlot?: number) => Promise<boolean>;
+  getLastAppointment: (patientName: string, beforeDate?: string) => Promise<Appointment | null>;
 }
 
 function genId() {
   return Math.random().toString(36).substring(2, 15);
 }
 
-export function PatientDrawer({ open, onClose, slot, date, existingAppt, onSave, onSearch, checkDuplicate }: Props) {
+export function PatientDrawer({ open, onClose, slot, date, existingAppt, onSave, onSearch, checkDuplicate, getLastAppointment }: Props) {
   const [name, setName] = useState('');
   const [susCard, setSusCard] = useState('');
   const [dob, setDob] = useState('');
   const [psf, setPsf] = useState('');
   const [reason, setReason] = useState('');
   const [type, setType] = useState<'NORMAL' | 'RETORNO'>('NORMAL');
+  const [time, setTime] = useState('');
   const [patientId, setPatientId] = useState('');
   const [suggestions, setSuggestions] = useState<Patient[]>([]);
   const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [lastApptDate, setLastApptDate] = useState<string | null>(null);
-  const [isRetornoAuto, setIsRetornoAuto] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (existingAppt) {
@@ -43,66 +44,71 @@ export function PatientDrawer({ open, onClose, slot, date, existingAppt, onSave,
       setPsf(existingAppt.psf);
       setReason(existingAppt.reason);
       setType(existingAppt.type);
-      const last = getPatientLastAppointment(existingAppt.patientId, existingAppt.date);
-      setLastApptDate(last?.date || null);
+      setTime(existingAppt.time || '');
       setPatientId(existingAppt.patientId);
+      getLastAppointment(existingAppt.patientName, existingAppt.date).then(last => {
+        setLastApptDate(last?.date || null);
+      });
     } else {
       setName(''); setSusCard(''); setDob(''); setPsf('');
       setReason(''); setType('NORMAL'); setPatientId(genId());
+      setTime(slot && slot <= 15 ? '08:00' : '14:00');
       setLastApptDate(null);
     }
     setSuggestions([]);
     setDuplicateWarning(false);
-  }, [existingAppt, open]);
+  }, [existingAppt, open, slot]);
 
-  const handleNameChange = (val: string) => {
+  const handleNameChange = async (val: string) => {
     setName(val);
     if (val.length >= 2) {
-      setSuggestions(onSearch(val));
+      const results = await onSearch(val);
+      setSuggestions(results);
     } else {
       setSuggestions([]);
     }
   };
 
-  const selectPatient = (p: Patient) => {
+  const selectPatient = async (p: Patient) => {
     setName(p.name);
     setSusCard(p.susCard);
     setDob(p.dob);
     setPsf(p.psf);
     setPatientId(p.id);
     setSuggestions([]);
-    if (checkDuplicate(p.id, slot ?? undefined)) {
-      setDuplicateWarning(true);
-    } else {
-      setDuplicateWarning(false);
-    }
     
-    const last = getPatientLastAppointment(p.id, date);
+    const isDup = await checkDuplicate(p.name, slot ?? undefined);
+    setDuplicateWarning(isDup);
+    
+    const last = await getLastAppointment(p.name, date);
     setLastApptDate(last?.date || null);
-    
-    // Check if it should be RETORNO (e.g. within 30 days - optional but helpful)
-    // For now just show the date as requested.
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim() || slot === null) return;
-    const id = patientId || genId();
-    if (checkDuplicate(id, slot)) {
-      setDuplicateWarning(true);
-      return;
+    setSaving(true);
+    try {
+      const isDup = await checkDuplicate(name.trim().toUpperCase(), slot);
+      if (isDup) {
+        setDuplicateWarning(true);
+        return;
+      }
+      onSave({
+        slot,
+        date,
+        patientId: patientId || genId(),
+        patientName: name.trim().toUpperCase(),
+        susCard: susCard.trim(),
+        dob: dob.trim(),
+        psf: psf.trim().toUpperCase(),
+        reason: reason.trim(),
+        type,
+        time,
+      });
+      onClose();
+    } finally {
+      setSaving(false);
     }
-    onSave({
-      slot,
-      date,
-      patientId: id,
-      patientName: name.trim().toUpperCase(),
-      susCard: susCard.trim(),
-      dob: dob.trim(),
-      psf: psf.trim().toUpperCase(),
-      reason: reason.trim(),
-      type,
-    });
-    onClose();
   };
 
   if (slot === null) return null;
@@ -177,9 +183,14 @@ export function PatientDrawer({ open, onClose, slot, date, existingAppt, onSave,
               <Input value={psf} onChange={(e) => setPsf(e.target.value)} className="mt-1" />
             </div>
             <div>
-              <Label className="text-xs font-medium text-muted-foreground">Motivo</Label>
-              <Input value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1" />
+              <Label className="text-xs font-medium text-muted-foreground">Horário</Label>
+              <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="mt-1" />
             </div>
+          </div>
+
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground">Motivo</Label>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1" />
           </div>
 
           <div>
@@ -208,8 +219,8 @@ export function PatientDrawer({ open, onClose, slot, date, existingAppt, onSave,
             </div>
           </div>
 
-          <Button onClick={handleSave} className="w-full mt-2" disabled={!name.trim() || duplicateWarning}>
-            {existingAppt ? 'Atualizar' : 'Agendar'}
+          <Button onClick={handleSave} className="w-full mt-2" disabled={!name.trim() || duplicateWarning || saving}>
+            {saving ? 'Salvando...' : existingAppt ? 'Atualizar' : 'Agendar'}
           </Button>
         </div>
       </DialogContent>
