@@ -1,5 +1,5 @@
 import { Appointment } from '@/types/scheduling';
-import { X, Printer, CheckCircle2 } from 'lucide-react';
+import { X, Printer, CheckCircle2, Clock } from 'lucide-react';
 
 interface Props {
   slot: number;
@@ -39,6 +39,12 @@ export function SlotCard({ slot, appointment, variant, isAberto, onClick, onRemo
         <div className="flex-1 min-w-0 ml-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium truncate">{appointment.patientName}</span>
+            {appointment.time && (
+              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground font-medium">
+                <Clock className="w-3 h-3" />
+                {appointment.time}
+              </span>
+            )}
             {appointment.type === 'RETORNO' && (
               <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-retorno text-retorno-foreground">
                 RETORNO

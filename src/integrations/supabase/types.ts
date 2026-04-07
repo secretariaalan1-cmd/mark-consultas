@@ -27,6 +27,7 @@ export type Database = {
           reason: string
           slot: number
           sus_card: string
+          time: string
           type: string
           workspace_id: string
         }
@@ -42,6 +43,7 @@ export type Database = {
           reason?: string
           slot: number
           sus_card?: string
+          time?: string
           type?: string
           workspace_id: string
         }
@@ -57,6 +59,7 @@ export type Database = {
           reason?: string
           slot?: number
           sus_card?: string
+          time?: string
           type?: string
           workspace_id?: string
         }
